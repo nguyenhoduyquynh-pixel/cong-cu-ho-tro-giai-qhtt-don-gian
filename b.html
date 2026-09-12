@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giải Quy Hoạch Tuyến Tính & Bài Toán Vận Tải</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px 35px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 24px;
+        }
+        h3 {
+            font-size: 20px;
+        }
+        .config-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .config-box label {
+            font-weight: bold;
+        }
+        input[type="number"], select {
+            padding: 8px 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 80px;
+            text-align: center;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .btn-success {
+            background-color: #2ecc71;
+            display: block;
+            margin: 20px auto;
+            padding: 12px 35px;
+            font-size: 18px;
+        }
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        .math-section {
+            border: 1px solid #bdc3c7;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            background: #fafafa;
+            overflow-x: auto;
+        }
+        .row-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            font-size: 16px;
+        }
+        .row-item input {
+            width: 70px;
+            padding: 6px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 16px;
+        }
+        .result-container {
+            background: #ffffff;
+            color: #000000;
+            border: 1px solid #bdc3c7;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 16px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .system-container {
+            display: flex;
+            align-items: stretch;
+            margin-top: 5px;
+        }
+        .brace-box {
+            font-size: 50px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            margin-right: 8px;
+            line-height: 1;
+        }
+        .constraints-list {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+        table.input-table, table.result-table {
+            border-collapse: collapse;
+            margin-top: 10px;
+            width: 100%;
+        }
+        table.input-table td, table.input-table th,
+        table.result-table td, table.result-table th {
+            border: 1px solid #7f8c8d;
+            padding: 10px;
+            text-align: center;
+            font-size: 16px;
+        }
+        table.result-table th {
+            background-color: #ecf0f1;
+            font-weight: bold;
+        }
+        .pivot-cell {
+            background-color: #ffeaa7 !important;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>GIẢI QUY HOẠCH TUYẾN TÍNH & BÀI TOÁN VẬN TẢI</h2>
+    
+    <div class="config-box">
+        <label>Chọn dạng bài toán:</label>
+        <select id="dang_bai_toan" onchange="doiDangBaiToan()">
+            <option value="qhtt">Quy Hoạch Tuyến Tính (Big-M)</option>
+            <option value="vt">Bài Toán Vận Tải</option>
+        </select>
+
+        <div id="config_qhtt" style="display:contents;">
+            <label>Loại:</label>
+            <select id="loai_toan">
+                <option value="MIN">MIN</option>
+                <option value="MAX">MAX</option>
+            </select>
+            <label>Số biến:</label>
+            <input type="number" id="so_bien" value="3" min="1" max="10">
+            <label>Số ràng buộc:</label>
+            <input type="number" id="so_rb" value="2" min="1" max="10">
+        </div>
+
+        <div id="config_vt" style="display:none;">
+            <label>Số nguồn phát (m):</label>
+            <input type="number" id="vt_m" value="3" min="1" max="10">
+            <label>Số điểm thu (n):</label>
+            <input type="number" id="vt_n" value="3" min="1" max="10">
+        </div>
+
+        <button onclick="taoHe()">Tạo Giao Diện</button>
+    </div>
+
+    <div class="math-section" id="khung_nhap">
+        <!-- Khu vực nhập liệu động -->
+    </div>
+
+    <button class="btn-success" onclick="giaiBaiToan()">GIẢI BÀI TOÁN</button>
+
+    <h3>KẾT QUẢ GIẢI</h3>
+    <div id="ket_qua" class="result-container">Chưa có kết quả. Vui lòng nhập dữ liệu và bấm "Giải bài toán".</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+<script>
+// --- LỚP BIỂU THỨC A + BM ---
+class E {
+    constructor(a = 0, m = 0) {
+        this.a = math.fraction(a);
+        this.m = math.fraction(m);
+    }
+    add(other) {
+        let o = Eof(other);
+        return new E(math.add(this.a, o.a), math.add(this.m, o.m));
+    }
+    sub(other) {
+        let o = Eof(other);
+        return new E(math.subtract(this.a, o.a), math.subtract(this.m, o.m));
+    }
+    neg() {
+        return new E(math.unaryMinus(this.a), math.unaryMinus(this.m));
+    }
+    mul(other) {
+        if (other instanceof E) {
+            if (!math.equal(this.m, 0) && !math.equal(other.m, 0)) {
+                throw new Error("Không hỗ trợ M*M");
+            }
+            return new E(
+                math.multiply(this.a, other.a),
+                math.add(math.multiply(this.a, other.m), math.multiply(this.m, other.a))
+            );
+        }
+        let o = math.fraction(other);
+        return new E(math.multiply(this.a, o), math.multiply(this.m, o));
+    }
+    div(other) {
+        if (other instanceof E) {
+            if (!math.equal(other.m, 0)) {
+                throw new Error("Không thể chia cho biểu thức chứa M");
+            }
+            other = other.a;
+        }
+        let o = math.fraction(other);
+        return new E(math.divide(this.a, o), math.divide(this.m, o));
+    }
+    zero() {
+        return math.equal(this.a, 0) && math.equal(this.m, 0);
+    }
+    positive() {
+        if (!math.equal(this.m, 0)) return math.larger(this.m, 0);
+        return math.larger(this.a, 0);
+    }
+    negative() {
+        if (!math.equal(this.m, 0)) return math.smaller(this.m, 0);
+        return math.smaller(this.a, 0);
+    }
+    toString() {
+        let a = this.a;
+        let m = this.m;
+        if (math.equal(a, 0) && math.equal(m, 0)) return "0";
+        if (math.equal(m, 0)) return fracStr(a);
+
+        let s = "";
+        if (math.equal(m, 1)) s = "M";
+        else if (math.equal(m, -1)) s = "-M";
+        else s = fracStr(m) + "M";
+
+        if (math.larger(a, 0)) return s + " + " + fracStr(a);
+        if (math.smaller(a, 0)) return s + " - " + fracStr(math.unaryMinus(a));
+        return s;
+    }
+}
+
+function Eof(x) {
+    if (x instanceof E) return x;
+    return new E(x, 0);
+}
+
+function fracStr(x) {
+    let f = math.fraction(x);
+    if (f.d === 1) return f.s * f.n;
+    return `${f.s * f.n}/${f.d}`;
+}
+
+function docSo(val) {
+    val = val.trim().replace(",", ".");
+    if (val === "") throw new Error("Không được để trống hệ số.");
+    if (val.includes("/")) {
+        let parts = val.split("/");
+        return math.fraction(parseInt(parts[0]), parseInt(parts[1]));
+    }
+    return math.fraction(val);
+}
+
+function doiDangBaiToan() {
+    let loai = document.getElementById("dang_bai_toan").value;
+    if (loai === "qhtt") {
+        document.getElementById("config_qhtt").style.display = "contents";
+        document.getElementById("config_vt").style.display = "none";
+    } else {
+        document.getElementById("config_qhtt").style.display = "none";
+        document.getElementById("config_vt").style.display = "contents";
+    }
+    taoHe();
+}
+
+function taoHe() {
+    let dang = document.getElementById("dang_bai_toan").value;
+    let container = document.getElementById("khung_nhap");
+
+    if (dang === "qhtt") {
+        let n = parseInt(document.getElementById("so_bien").value);
+        let m = parseInt(document.getElementById("so_rb").value);
+        let loai = document.getElementById("loai_toan").value.toLowerCase();
+        
+        let html = `<strong>Hàm mục tiêu f(x):</strong><div class="row-item" style="margin-top:5px;"><span>f(x) =</span>`;
+        for (let j = 0; j < n; j++) {
+            html += `<input type="text" class="mt-input" value="0"> <span>x${j+1}</span>`;
+            if (j < n - 1) html += `<span>+</span>`;
+        }
+        html += `<span>→ <strong>${loai}</strong></span></div>`;
+        html += `<div style="margin: 15px 0 5px 0;"><strong>Hệ ràng buộc:</strong></div>`;
+        html += `<div class="system-container"><div class="brace-box">{</div><div class="constraints-list" id="ds_rb">`;
+        for (let i = 0; i < m; i++) {
+            html += `<div class="row-item rb-row">`;
+            for (let j = 0; j < n; j++) {
+                html += `<input type="text" class="rb-mat-input" value="0"> <span>x${j+1}</span>`;
+                if (j < n - 1) html += `<span>+</span>`;
+            }
+            html += `<select class="rb-dau"><option value=">=">&gt;=</option><option value="<=">&lt;=</option><option value="=">=</option></select>`;
+            html += `<input type="text" class="rb-rhs-input" value="0"></div>`;
+        }
+        html += `</div></div>`;
+        container.innerHTML = html;
+    } else {
+        let m = parseInt(document.getElementById("vt_m").value);
+        let n = parseInt(document.getElementById("vt_n").value);
+
+        let html = `<strong>Nhập ma trận chi phí c(ij) và trữ lượng/nhu cầu:</strong>`;
+        html += `<table class="input-table"><tr><th>Phát \\ Thu</th>`;
+        for (let j = 0; j < n; j++) html += `<th>Thu ${j+1}</th>`;
+        html += `<th>Dự trữ (ai)</th></tr>`;
+
+        for (let i = 0; i < m; i++) {
+            html += `<tr><td><strong>Phát ${i+1}</strong></td>`;
+            for (let j = 0; j < n; j++) {
+                html += `<td><input type="text" class="vt-c-input" data-i="${i}" data-j="${j}" value="1"></td>`;
+            }
+            html += `<td><input type="text" class="vt-a-input" data-i="${i}" value="10"></td></tr>`;
+        }
+        html += `<tr><td><strong>Nhu cầu (bj)</strong></td>`;
+        for (let j = 0; j < n; j++) {
+            html += `<td><input type="text" class="vt-b-input" data-j="${j}" value="10"></td>`;
+        }
+        html += `<td>-</td></tr></table>`;
+        container.innerHTML = html;
+    }
+}
+
+// --- THUẬT TOÁN ĐƠN HÌNH BIG-M CHO QHTT ---
+function lon_hon(a, b) {
+    if (!math.equal(a.m, b.m)) return math.larger(a.m, b.m);
+    return math.larger(a.a, b.a);
+}
+
+function nho_hon(a, b) {
+    if (!math.equal(a.m, b.m)) return math.smaller(a.m, b.m);
+    return math.smaller(a.a, b.a);
+}
+
+function tao_bang(rows, basis, C) {
+    let T = rows.map(row => [...row]);
+    let n = C.length;
+    let fx = [];
+
+    for (let j = 0; j < n; j++) {
+        let zj = new E(0);
+        for (let i = 0; i < basis.length; i++) {
+            zj = zj.add(C[basis[i]].mul(rows[i][j]));
+        }
+        fx.push(zj.sub(C[j]));
+    }
+
+    let Z = new E(0);
+    for (let i = 0; i < basis.length; i++) {
+        Z = Z.add(C[basis[i]].mul(rows[i][rows[i].length - 1]));
+    }
+    fx.push(Z);
+    T.push(fx);
+    return T;
+}
+
+function chon_vao(T, loai) {
+    let cot = null;
+    let lastRow = T[T.length - 1];
+    for (let j = 0; j < lastRow.length - 1; j++) {
+        let v = lastRow[j];
+        if (loai === "MIN") {
+            if (v.positive()) {
+                if (cot === null || lon_hon(v, lastRow[cot])) cot = j;
+            }
+        } else {
+            if (v.negative()) {
+                if (cot === null || nho_hon(v, lastRow[cot])) cot = j;
+            }
+        }
+    }
+    return cot;
+}
+
+function tinh_pa(T, cot) {
+    let pa = {};
+    for (let i = 0; i < T.length - 1; i++) {
+        let a = T[i][cot];
+        let P = T[i][T[i].length - 1];
+        if (math.equal(a.m, 0) && math.larger(a.a, 0)) {
+            pa[i] = math.divide(P.a, a.a);
+        }
+    }
+    return pa;
+}
+
+function xoay(T, dong, cot) {
+    let p = T[dong][cot];
+    for (let j = 0; j < T[0].length; j++) {
+        T[dong][j] = T[dong][j].div(p);
+    }
+    for (let i = 0; i < T.length; i++) {
+        if (i === dong) continue;
+        let k = T[i][cot];
+        if (k.zero()) continue;
+        for (let j = 0; j < T[0].length; j++) {
+            T[i][j] = T[i][j].sub(k.mul(T[dong][j]));
+        }
+    }
+}
+
+function formatTableHTML(tableData, basis, C, names, entering, leaving, pa) {
+    let n = C.length;
+    let m = basis.length;
+    let html = '<table class="result-table">';
+    
+    let header = ["C_B", "x_B", "P/a"].concat(names);
+    html += '<tr>';
+    header.forEach(h => html += `<th>${h}</th>`);
+    html += '</tr>';
+
+    let cjRow = ["", "Cj", ""].concat(C.map(c => c.toString()));
+    html += '<tr>';
+    cjRow.forEach(c => html += `<td><strong>${c}</strong></td>`);
+    html += '</tr>';
+
+    for (let i = 0; i < m; i++) {
+        let pval = tableData[i][tableData[i].length - 1].toString();
+        html += '<tr>';
+        html += `<td>${C[basis[i]].toString()}</td>`;
+        html += `<td>${names[basis[i]]}</td>`;
+        html += `<td>${pval}</td>`;
+        for (let j = 0; j < n; j++) {
+            let val = tableData[i][j].toString();
+            let isPivot = (i === leaving && j === entering);
+            let cls = isPivot ? ' class="pivot-cell"' : '';
+            html += `<td${cls}>${val}</td>`;
+        }
+        html += '</tr>';
+    }
+
+    let fxRow = ["", "f(x)", tableData[tableData.length - 1][tableData[tableData.length - 1].length - 1].toString()].concat(
+        tableData[tableData.length - 1].slice(0, n).map(v => v.toString())
+    );
+    html += '<tr>';
+    fxRow.forEach(f => html += `<td><strong>${f}</strong></td>`);
+    html += '</tr>';
+
+    html += '</table>';
+    return html;
+}
+
+function giaiQHTTBigM(out) {
+    let loai = document.getElementById("loai_toan").value;
+    let n = parseInt(document.getElementById("so_bien").value);
+    let m = parseInt(document.getElementById("so_rb").value);
+
+    let mtInputs = document.querySelectorAll(".mt-input");
+    let c = Array.from(mtInputs).map(inp => docSo(inp.value));
+
+    let rbRows = document.querySelectorAll(".rb-row");
+    let A = [];
+    let b = [];
+    let dau = [];
+
+    rbRows.forEach(row => {
+        let matInputs = row.querySelectorAll(".rb-mat-input");
+        let rowVals = Array.from(matInputs).map(inp => docSo(inp.value));
+        let d = row.querySelector(".rb-dau").value;
+        let rhsVal = docSo(row.querySelector(".rb-rhs-input").value);
+
+        if (math.smaller(rhsVal, 0)) {
+            rhsVal = math.unaryMinus(rhsVal);
+            rowVals = rowVals.map(x => math.unaryMinus(x));
+            if (d === "<=") d = ">=";
+            else if (d === ">=") d = "<=";
+        }
+        A.push(rowVals);
+        b.push(rhsVal);
+        dau.push(d);
+    });
+
+    // --- TẠO CHUỖI VIẾT LẠI ĐỀ BÀI ---
+    let deBaiHTML = `<b>ĐỀ BÀI ĐÃ CHO:</b>\n`;
+    let fxParts = [];
+    for(let j=0; j<n; j++) {
+        let valStr = fracStr(c[j]);
+        if (math.larger(c[j], 0) && j > 0) fxParts.push("+ " + valStr + `x${j+1}`);
+        else if (math.smaller(c[j], 0)) fxParts.push("- " + fracStr(math.unaryMinus(c[j])) + `x${j+1}`);
+        else fxParts.push(valStr + `x${j+1}`);
+    }
+    deBaiHTML += `f(x) = ${fxParts.join(" ")} → <b>${loai}</b>\n`;
+    deBaiHTML += `Hệ ràng buộc:\n`;
+    for(let i=0; i<m; i++) {
+        let rowParts = [];
+        for(let j=0; j<n; j++) {
+            let val = A[i][j];
+            if (val.s === 1 && val.n === 0) continue;
+            let vStr = fracStr(val);
+            if (math.larger(val, 0)) {
+                rowParts.push((rowParts.length > 0 ? "+ " : "") + (math.equal(val, 1) ? "" : vStr) + `x${j+1}`);
+            } else if (math.smaller(val, 0)) {
+                rowParts.push("- " + (math.equal(val, -1) ? "" : fracStr(math.unaryMinus(val))) + `x${j+1}`);
+            }
+        }
+        deBaiHTML += `  ${rowParts.join(" ")} ${dau[i]} ${fracStr(b[i])}\n`;
+    }
+    let nonNeg = [];
+    for(let j=0; j<n; j++) nonNeg.push(`x${j+1}`);
+    deBaiHTML += `  ${nonNeg.join(", ")} >= 0\n\n`;
+
+    let names = Array.from({length: n}, (_, i) => `x${i+1}`);
+    let rows = A.map(row => row.map(x => new E(x)));
+    let basis = [];
+    let artificial = [];
+
+    for (let i = 0; i < m; i++) {
+        if (dau[i] === "<=") {
+            rows.forEach(r => r.push(new E(0)));
+            rows[i][rows[i].length - 1] = new E(1);
+            let idx = names.length;
+            basis.push(idx);
+            names.push(`x${idx + 1}`);
+        } else if (dau[i] === ">=") {
+            rows.forEach(r => r.push(new E(0)));
+            rows[i][rows[i].length - 1] = new E(-1);
+            let idx1 = names.length;
+            names.push(`x${idx1 + 1}`);
+
+            rows.forEach(r => r.push(new E(0)));
+            rows[i][rows[i].length - 1] = new E(1);
+            let idx2 = names.length;
+            basis.push(idx2);
+            artificial.push(idx2);
+            names.push(`x${idx2 + 1}`);
+        } else {
+            rows.forEach(r => r.push(new E(0)));
+            rows[i][rows[i].length - 1] = new E(1);
+            let idx = names.length;
+            basis.push(idx);
+            artificial.push(idx);
+            names.push(`x${idx + 1}`);
+        }
+    }
+
+    for (let i = 0; i < m; i++) {
+        rows[i].push(new E(b[i]));
+    }
+
+    let C = [];
+    for (let j = 0; j < names.length; j++) {
+        if (j < n) C.push(new E(c[j]));
+        else C.push(new E(0));
+    }
+
+    artificial.forEach(j => {
+        if (loai === "MIN") C[j] = new E(0, 1);
+        else C[j] = new E(0, -1);
+    });
+
+    let logHTML = deBaiHTML + `<b>GIẢI QUY HOẠCH TUYẾN TÍNH BẰNG ĐƠN HÌNH BIG-M</b>\n`;
+    logHTML += `Bài toán: ${loai} | Số biến: ${n} | Số ràng buộc: ${m}\n\n`;
+
+    let so_bang = 0;
+    while (true) {
+        let T = tao_bang(rows, basis, C);
+        let entering = chon_vao(T, loai);
+        let leaving = null;
+        let ratios = null;
+
+        if (entering !== null) {
+            ratios = tinh_pa(T, entering);
+            if (Object.keys(ratios).length === 0) {
+                logHTML += "<br>❌ <b>KẾT LUẬN: HÀM MỤC TIÊU KHÔNG BỊ CHẶN.</b>";
+                out.innerHTML = logHTML;
+                return;
+            }
+            leaving = Object.keys(ratios).reduce((minIdx, idx) => {
+                return math.smaller(ratios[idx], ratios[minIdx]) ? idx : minIdx;
+            });
+            leaving = parseInt(leaving);
+        }
+
+        so_bang++;
+        logHTML += `\n<b>--- BẢNG ${so_bang} ---</b>\n`;
+        logHTML += formatTableHTML(T, basis, C, names, entering, leaving, ratios) + "\n";
+
+        if (entering === null) break;
+
+        xoay(rows, leaving, entering);
+        basis[leaving] = entering;
+    }
+
+    for (let i = 0; i < m; i++) {
+        if (artificial.includes(basis[i])) {
+            if (!math.equal(rows[i][rows[i].length - 1].a, 0)) {
+                logHTML += "<br>❌ <b>BÀI TOÁN VÔ NGHIỆM.</b><br>Kết luận: Tập phương án là rỗng (∅).";
+                out.innerHTML = logHTML;
+                return;
+            }
+        }
+    }
+
+    let x = Array(n).fill(math.fraction(0));
+    for (let i = 0; i < m; i++) {
+        let bien = basis[i];
+        if (bien < n) {
+            x[bien] = rows[i][rows[i].length - 1].a;
+        }
+    }
+
+    let f = math.fraction(0);
+    for (let i = 0; i < n; i++) {
+        f = math.add(f, math.multiply(c[i], x[i]));
+    }
+
+    let xVectorStr = "(" + x.map(val => fracStr(val)).join(", ") + ")";
+
+    logHTML += "\n<b>==================== KẾT LUẬN TỐI ƯU ====================</b>\n";
+    logHTML += `x* = ${xVectorStr}\n`;
+    for (let i = 0; i < n; i++) {
+        logHTML += `  x${i + 1} = ${fracStr(x[i])}\n`;
+    }
+    logHTML += `\n<b>f(x)* = ${fracStr(f)}</b>\n`;
+
+    out.innerHTML = logHTML;
+}
+
+// --- THUẬT TOÁN BÀI TOÁN VẬN TẢI ---
+function giaiBaiToanVatTai() {
+    let m = parseInt(document.getElementById("vt_m").value);
+    let n = parseInt(document.getElementById("vt_n").value);
+    
+    let C = Array(m).fill(0).map(() => Array(n).fill(0));
+    let A = Array(m).fill(0);
+    let B = Array(n).fill(0);
+
+    document.querySelectorAll(".vt-c-input").forEach(inp => {
+        let i = parseInt(inp.dataset.i), j = parseInt(inp.dataset.j);
+        C[i][j] = docSo(inp.value);
+    });
+    document.querySelectorAll(".vt-a-input").forEach(inp => {
+        let i = parseInt(inp.dataset.i);
+        A[i] = docSo(inp.value);
+    });
+    document.querySelectorAll(".vt-b-input").forEach(inp => {
+        let j = parseInt(inp.dataset.j);
+        B[j] = docSo(inp.value);
+    });
+
+    let sumA = A.reduce((s, x) => math.add(s, x), 0);
+    let sumB = B.reduce((s, x) => math.add(s, x), 0);
+
+    let log = "<b>=== BÀI TOÁN VẬN TẢI ===</b>\n";
+    if (!math.equal(sumA, sumB)) {
+        log += `Bài toán không cân bằng! Tổng phát = ${fracStr(sumA)}, Tổng thu = ${fracStr(sumB)}\n`;
+        if (math.larger(sumA, sumB)) {
+            let diff = math.subtract(sumA, sumB);
+            B.push(diff);
+            for(let i=0; i<m; i++) C[i].push(math.fraction(0));
+            n++;
+            log += `-> Thêm điểm thu giả với nhu cầu ${fracStr(diff)}, chi phí = 0.\n\n`;
+        } else {
+            let diff = math.subtract(sumB, sumA);
+            A.push(diff);
+            let dummyRow = Array(n).fill(math.fraction(0));
+            C.push(dummyRow);
+            m++;
+            log += `-> Thêm nguồn phát giả với dự trữ ${fracStr(diff)}, chi phí = 0.\n\n`;
+        }
+    } else {
+        log += "Bài toán đã cân bằng phát và thu.\n\n";
+    }
+
+    let X = Array(m).fill(0).map(() => Array(n).fill(math.fraction(0)));
+    let a_rem = [...A];
+    let b_rem = [...B];
+    let visitedC = Array(m).fill(false);
+    let visitedR = Array(n).fill(false);
+
+    let steps = 0;
+    while(steps < m + n) {
+        let minC = null;
+        let bestI = -1, bestJ = -1;
+        for(let i=0; i<m; i++) {
+            if (visitedC[i]) continue;
+            for(let j=0; j<n; j++) {
+                if (visitedR[j]) continue;
+                if (minC === null || math.smaller(C[i][j], minC)) {
+                    minC = C[i][j];
+                    bestI = i; bestJ = j;
+                }
+            }
+        }
+        if (bestI === -1 || bestJ === -1) break;
+
+        let alloc = math.smaller(a_rem[bestI], b_rem[bestJ]) ? a_rem[bestI] : b_rem[bestJ];
+        X[bestI][bestJ] = alloc;
+        a_rem[bestI] = math.subtract(a_rem[bestI], alloc);
+        b_rem[bestJ] = math.subtract(b_rem[bestJ], alloc);
+
+        if (math.equal(a_rem[bestI], 0)) {
+            visitedC[bestI] = true;
+        } else {
+            visitedR[bestJ] = true;
+        }
+        steps++;
+    }
+
+    let totalCost = 0;
+    for(let i=0; i<m; i++) {
+        for(let j=0; j<n; j++) {
+            totalCost = math.add(totalCost, math.multiply(X[i][j], C[i][j]));
+        }
+    }
+
+    log += "Phương án phân phối ban đầu (Cước phí nhỏ nhất):\n";
+    for(let i=0; i<m; i++) {
+        log += X[i].map(x => String(fracStr(x)).padStart(6)).join(" ") + "\n";
+    }
+    log += `\n<b>Tổng chi phí vận chuyển tối ưu ban đầu: ${fracStr(totalCost)}</b>\n`;
+    return log;
+}
+
+// --- HÀM ĐIỀU HƯỚNG CHUNG ---
+function giaiBaiToan() {
+    let dang = document.getElementById("dang_bai_toan").value;
+    let out = document.getElementById("ket_qua");
+    out.innerText = "Đang xử lý...";
+    try {
+        if (dang === "qhtt") {
+            giaiQHTTBigM(out);
+        } else {
+            let res = giaiBaiToanVatTai();
+            out.innerHTML = res;
+        }
+    } catch(err) {
+        out.innerText = "Lỗi khi giải: " + err.message;
+        console.error(err);
+    }
+}
+
+window.onload = function() {
+    taoHe();
+};
+</script>
+
+</body>
+</html>
